@@ -75,7 +75,7 @@ fn folder_walk(
 
 fn main() {
     let args = Command::new("lg")
-        .version("0.1.0")
+        .version("0.1.1")
         .author("Mattia B. <mattia.bunel@ign.fr>")
         .about("lg (LasGrep) is a tool to filter asprs's las and laz files, with the informations \
         contained in the file header.")
