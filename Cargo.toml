@@ -1,18 +1,18 @@
 [package]
 name = "lg"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-las = {version = "~0.7", features = ["laz"]}
-geo = "~0.23"
+las = {version = "~0.8", features = ["laz"]}
+geo = "0.28"
 geo-types = "0.7"
-clap = "4.0.18"
+clap = "4"
 semver = "1"
 wkt = "0.10"
-regex = "1.6"
+regex = "1.10"
 walkdir = "2"
-uuid = "1.2"
-chrono = "0.4"
+uuid = "1.8"
+chrono = "~0.4"

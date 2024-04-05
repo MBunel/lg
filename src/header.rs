@@ -1,6 +1,5 @@
-use chrono::{Date, Utc};
+use chrono::NaiveDate;
 use geo::{Centroid, LineString, Polygon};
-
 use las::Bounds;
 use semver::Version;
 use uuid::Uuid;
@@ -13,9 +12,9 @@ pub struct MyHeader {
     pub version: Version,
     pub system_identifier: String,
     pub generating_software: String,
-    pub date: Option<Date<Utc>>,
+    pub date: Option<NaiveDate>,
     pub point_format: las::point::Format,
-    //tranform
+    //transform
     pub bbox: Polygon,
     pub centroid: geo::Point,
     pub number_of_points: u64,
