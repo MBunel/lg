@@ -4,6 +4,7 @@ use las::Bounds;
 use semver::Version;
 use uuid::Uuid;
 
+
 pub struct MyHeader {
     pub file_source_id: u16,
     pub gps_time_type: las::GpsTimeType,

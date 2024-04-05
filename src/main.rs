@@ -6,7 +6,10 @@ mod numeric_filter;
 mod spatial_filter;
 mod string_filter;
 
+use chrono::NaiveDate;
+use clap::builder::Str;
 use clap::{Arg, ArgAction, ArgGroup, Command};
+use env_logger::Builder;
 use std::default::Default;
 
 use wkt::TryFromWkt;
@@ -16,9 +19,11 @@ use crate::list_filter::ListFilter;
 use crate::numeric_filter::NumericFilter;
 use crate::string_filter::StringFilter;
 
+use crate::date_filter::DateFilter;
 use crate::spatial_filter::{SpatialFilter, SpatialPredicate};
 use geo::Geometry;
 use las::{Read, Reader};
+use log::{debug, LevelFilter};
 use walkdir::{DirEntry, WalkDir};
 
 fn file_filter(entry: DirEntry, inverse: bool, extensions: &Vec<&str>, filter: &LasHeaderFilter) {
@@ -35,7 +40,7 @@ fn file_filter(entry: DirEntry, inverse: bool, extensions: &Vec<&str>, filter: &
 
                 match inverse ^ filter.filter(&header) {
                     true => {
-                        println!("'{}'", entry.path().display())
+                        println!("{}", entry.path().display())
                     }
                     false => {}
                 }
@@ -75,10 +80,12 @@ fn folder_walk(
 
 fn main() {
     let args = Command::new("lg")
-        .version("0.1.1")
+        .version("0.1.2")
         .author("Mattia B. <mattia.bunel@ign.fr>")
-        .about("lg (LasGrep) is a tool to filter asprs's las and laz files, with the informations \
-        contained in the file header.")
+        .about(
+            "lg (LasGrep) is a tool to filter asprs's las and laz files, with the informations \
+        contained in the file header.",
+        )
         // Arguments Needed
         .arg(
             Arg::new("input")
@@ -87,6 +94,12 @@ fn main() {
                 .help("help string"),
         )
         // Options
+        .arg(
+            Arg::new("verbose")
+                .short('v')
+                .action(clap::ArgAction::Count)
+                .help("Non implemented yet"),
+        )
         .next_help_heading("Find name")
         .arg(
             Arg::new("las_version")
@@ -124,7 +137,16 @@ fn main() {
         .arg(
             Arg::new("date")
                 .long("date")
-                .help("Not implemented now")
+                .value_parser(clap::value_parser!(String))
+                .help("Not implemented now"),
+        )
+        .arg(
+            Arg::new("date-format")
+                .long("date-format")
+                .value_parser(clap::value_parser!(String))
+                .default_value("%d/%m/%Y")
+                .requires("date")
+                .help("Not implemented now"),
         )
         .arg(
             Arg::new("guid")
@@ -152,50 +174,48 @@ fn main() {
         .arg(
             Arg::new("transform")
                 .long("transform")
-                .help("Not implemented now")
+                .help("Not implemented now"),
         )
-        .arg(
-            Arg::new("points_number")
-                .long("points-number")
-                .help("Selects files according the number of points (eg. \">1000\"). \
-                Allowed operators : \"=\", \"!=\", \"<=\", \">=\", \"<\" and \">\"."),
-        )
+        .arg(Arg::new("points_number").long("points-number").help(
+            "Selects files according the number of points (eg. \">1000\"). \
+                Allowed operators : \"=\", \"!=\", \"<=\", \">=\", \"<\" and \">\".",
+        ))
         // Spatial filters
         .next_help_heading("Spatial filters")
         .arg(
             Arg::new("wkt")
                 .long("wkt")
                 .value_parser(clap::value_parser!(String))
-                .help("Todo")
+                .help("Todo"),
         )
         .arg(
             Arg::new("intersects")
                 .long("intersects")
                 .action(ArgAction::SetTrue)
-                .help("Todo")
+                .help("Todo"),
         )
         .arg(
             Arg::new("within")
                 .long("within")
                 .action(ArgAction::SetTrue)
-                .help("Todo")
+                .help("Todo"),
         )
         .arg(
             Arg::new("centroid_within")
                 .long("centroid-within")
                 .action(ArgAction::SetTrue)
-                .help("Todo")
+                .help("Todo"),
         )
         .arg(
             Arg::new("contains")
                 .long("contains")
                 .action(ArgAction::SetTrue)
-                .help("Todo")
+                .help("Todo"),
         )
         .arg(
             Arg::new("distance")
                 .long("distance")
-                .help("Todo (Distance in CRS's units)")
+                .help("Todo (Distance in CRS's units)"),
         )
         .next_help_heading("Find name 2")
         .arg(
@@ -210,7 +230,7 @@ fn main() {
             Arg::new("exclude-dirs")
                 .long("exclude-dirs")
                 .action(ArgAction::Append)
-                .help("Not implemented now")
+                .help("Not implemented now"),
         )
         .arg(
             Arg::new("invert")
@@ -224,7 +244,7 @@ fn main() {
                 .long("recursive")
                 .short('R')
                 .action(ArgAction::SetTrue)
-                .help("List files recursivelyq"),
+                .help("List files recursively"),
         )
         .arg(
             Arg::new("follow_links")
@@ -238,14 +258,14 @@ fn main() {
                 .short('c')
                 .long("canonicalize")
                 .action(ArgAction::SetTrue)
-                .help("Not implemented now")
+                .help("Not implemented now"),
         )
         .arg(
             Arg::new("debug")
                 .short('d')
                 .long("debug")
                 .action(ArgAction::SetTrue)
-                .help("Not implemented now")
+                .help("Print the parameters and quit (for debug purposes)"),
         )
         //.group(ArgGroup::new("Test").arg("transform").arg("extensions"))
         // Groups
@@ -266,6 +286,22 @@ fn main() {
                 .requires("spatial_predicates"),
         )
         .get_matches();
+
+    let mut log_builder = Builder::new();
+    let verbose_count = args.get_count("verbose");
+    let default_log_level = 1; // Error
+    let log_level = default_log_level + verbose_count;
+    match log_level {
+        0..=5 => {
+            let level_filter = LevelFilter::iter().nth(log_level as usize).unwrap();
+            log_builder.filter_level(level_filter);
+        }
+        _ => {
+            // If too much verbose, set to max
+            log_builder.filter_level(LevelFilter::max());
+        }
+    }
+    log_builder.init();
 
     // Creation of filter object
     let mut filter = LasHeaderFilter {
@@ -307,6 +343,16 @@ fn main() {
             las_version,
             &String::from("las_version"),
         )));
+    }
+
+    if let Some(date) = args.get_one::<String>("date") {
+        let date_format = args.get_one::<String>("date-format").unwrap();
+
+        filter.date_filter = Some(Filter::FDate(DateFilter::new(
+            date,
+            date_format,
+            &String::from("date"),
+        )))
     }
 
     if let Some(guid) = args.get_one("guid") {
@@ -366,15 +412,24 @@ fn main() {
         .map(|v| v.as_str())
         .collect::<Vec<_>>();
 
-    // Main code
-    for path in paths {
-        folder_walk(
-            path,
-            args.get_flag("recursive"),
-            args.get_flag("follow_links"),
-            args.get_flag("invert"),
-            &extensions,
-            &filter,
-        )
+    match args.get_flag("debug") {
+        true => {
+            println!("Paths: {:?}", &paths);
+            println!("Extensions: {:?}", &extensions);
+            println!("Filters: {:?}", &filter);
+        }
+        false => {
+            // Main code
+            for path in paths {
+                folder_walk(
+                    path,
+                    args.get_flag("recursive"),
+                    args.get_flag("follow_links"),
+                    args.get_flag("invert"),
+                    &extensions,
+                    &filter,
+                )
+            }
+        }
     }
 }
