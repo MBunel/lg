@@ -6,6 +6,7 @@ mod numeric_filter;
 mod spatial_filter;
 mod string_filter;
 
+use chrono::NaiveDate;
 use clap::{Arg, ArgAction, ArgGroup, Command};
 use std::default::Default;
 
@@ -75,10 +76,12 @@ fn folder_walk(
 
 fn main() {
     let args = Command::new("lg")
-        .version("0.1.1")
+        .version("0.1.2")
         .author("Mattia B. <mattia.bunel@ign.fr>")
-        .about("lg (LasGrep) is a tool to filter asprs's las and laz files, with the informations \
-        contained in the file header.")
+        .about(
+            "lg (LasGrep) is a tool to filter asprs's las and laz files, with the informations \
+        contained in the file header.",
+        )
         // Arguments Needed
         .arg(
             Arg::new("input")
@@ -124,7 +127,8 @@ fn main() {
         .arg(
             Arg::new("date")
                 .long("date")
-                .help("Not implemented now")
+                .value_parser(clap::value_parser!(NaiveDate))
+                .help("Not implemented now"),
         )
         .arg(
             Arg::new("guid")
@@ -152,50 +156,48 @@ fn main() {
         .arg(
             Arg::new("transform")
                 .long("transform")
-                .help("Not implemented now")
+                .help("Not implemented now"),
         )
-        .arg(
-            Arg::new("points_number")
-                .long("points-number")
-                .help("Selects files according the number of points (eg. \">1000\"). \
-                Allowed operators : \"=\", \"!=\", \"<=\", \">=\", \"<\" and \">\"."),
-        )
+        .arg(Arg::new("points_number").long("points-number").help(
+            "Selects files according the number of points (eg. \">1000\"). \
+                Allowed operators : \"=\", \"!=\", \"<=\", \">=\", \"<\" and \">\".",
+        ))
         // Spatial filters
         .next_help_heading("Spatial filters")
         .arg(
             Arg::new("wkt")
                 .long("wkt")
                 .value_parser(clap::value_parser!(String))
-                .help("Todo")
+                .help("Todo"),
         )
         .arg(
             Arg::new("intersects")
                 .long("intersects")
                 .action(ArgAction::SetTrue)
-                .help("Todo")
+                .help("Todo"),
         )
         .arg(
             Arg::new("within")
                 .long("within")
                 .action(ArgAction::SetTrue)
-                .help("Todo")
+                .help("Todo"),
         )
         .arg(
             Arg::new("centroid_within")
                 .long("centroid-within")
                 .action(ArgAction::SetTrue)
-                .help("Todo")
+                .help("Todo"),
         )
         .arg(
             Arg::new("contains")
                 .long("contains")
                 .action(ArgAction::SetTrue)
-                .help("Todo")
+                .help("Todo"),
         )
         .arg(
             Arg::new("distance")
                 .long("distance")
-                .help("Todo (Distance in CRS's units)")
+                .help("Todo (Distance in CRS's units)"),
         )
         .next_help_heading("Find name 2")
         .arg(
@@ -210,7 +212,7 @@ fn main() {
             Arg::new("exclude-dirs")
                 .long("exclude-dirs")
                 .action(ArgAction::Append)
-                .help("Not implemented now")
+                .help("Not implemented now"),
         )
         .arg(
             Arg::new("invert")
@@ -224,7 +226,7 @@ fn main() {
                 .long("recursive")
                 .short('R')
                 .action(ArgAction::SetTrue)
-                .help("List files recursivelyq"),
+                .help("List files recursively"),
         )
         .arg(
             Arg::new("follow_links")
@@ -238,14 +240,14 @@ fn main() {
                 .short('c')
                 .long("canonicalize")
                 .action(ArgAction::SetTrue)
-                .help("Not implemented now")
+                .help("Not implemented now"),
         )
         .arg(
             Arg::new("debug")
                 .short('d')
                 .long("debug")
                 .action(ArgAction::SetTrue)
-                .help("Not implemented now")
+                .help("Print the parameters and quit (for debug purposes)"),
         )
         //.group(ArgGroup::new("Test").arg("transform").arg("extensions"))
         // Groups
@@ -366,15 +368,24 @@ fn main() {
         .map(|v| v.as_str())
         .collect::<Vec<_>>();
 
-    // Main code
-    for path in paths {
-        folder_walk(
-            path,
-            args.get_flag("recursive"),
-            args.get_flag("follow_links"),
-            args.get_flag("invert"),
-            &extensions,
-            &filter,
-        )
+    match args.get_flag("debug") {
+        true => {
+            println!("Paths: {:?}", &paths);
+            println!("Extensions: {:?}", &extensions);
+            println!("Filters: {:?}", &filter);
+        }
+        false => {
+            // Main code
+            for path in paths {
+                folder_walk(
+                    path,
+                    args.get_flag("recursive"),
+                    args.get_flag("follow_links"),
+                    args.get_flag("invert"),
+                    &extensions,
+                    &filter,
+                )
+            }
+        }
     }
 }
