@@ -7,7 +7,9 @@ mod spatial_filter;
 mod string_filter;
 
 use chrono::NaiveDate;
+use clap::builder::Str;
 use clap::{Arg, ArgAction, ArgGroup, Command};
+use env_logger::Builder;
 use std::default::Default;
 
 use wkt::TryFromWkt;
@@ -17,9 +19,11 @@ use crate::list_filter::ListFilter;
 use crate::numeric_filter::NumericFilter;
 use crate::string_filter::StringFilter;
 
+use crate::date_filter::DateFilter;
 use crate::spatial_filter::{SpatialFilter, SpatialPredicate};
 use geo::Geometry;
 use las::{Read, Reader};
+use log::{debug, LevelFilter};
 use walkdir::{DirEntry, WalkDir};
 
 fn file_filter(entry: DirEntry, inverse: bool, extensions: &Vec<&str>, filter: &LasHeaderFilter) {
@@ -36,7 +40,7 @@ fn file_filter(entry: DirEntry, inverse: bool, extensions: &Vec<&str>, filter: &
 
                 match inverse ^ filter.filter(&header) {
                     true => {
-                        println!("'{}'", entry.path().display())
+                        println!("{}", entry.path().display())
                     }
                     false => {}
                 }
@@ -90,6 +94,12 @@ fn main() {
                 .help("help string"),
         )
         // Options
+        .arg(
+            Arg::new("verbose")
+                .short('v')
+                .action(clap::ArgAction::Count)
+                .help("Non implemented yet"),
+        )
         .next_help_heading("Find name")
         .arg(
             Arg::new("las_version")
@@ -127,7 +137,15 @@ fn main() {
         .arg(
             Arg::new("date")
                 .long("date")
-                .value_parser(clap::value_parser!(NaiveDate))
+                .value_parser(clap::value_parser!(String))
+                .help("Not implemented now"),
+        )
+        .arg(
+            Arg::new("date-format")
+                .long("date-format")
+                .value_parser(clap::value_parser!(String))
+                .default_value("%d/%m/%Y")
+                .requires("date")
                 .help("Not implemented now"),
         )
         .arg(
@@ -269,6 +287,22 @@ fn main() {
         )
         .get_matches();
 
+    let mut log_builder = Builder::new();
+    let verbose_count = args.get_count("verbose");
+    let default_log_level = 1; // Error
+    let log_level = default_log_level + verbose_count;
+    match log_level {
+        0..=5 => {
+            let level_filter = LevelFilter::iter().nth(log_level as usize).unwrap();
+            log_builder.filter_level(level_filter);
+        }
+        _ => {
+            // If too much verbose, set to max
+            log_builder.filter_level(LevelFilter::max());
+        }
+    }
+    log_builder.init();
+
     // Creation of filter object
     let mut filter = LasHeaderFilter {
         ..Default::default()
@@ -309,6 +343,16 @@ fn main() {
             las_version,
             &String::from("las_version"),
         )));
+    }
+
+    if let Some(date) = args.get_one::<String>("date") {
+        let date_format = args.get_one::<String>("date-format").unwrap();
+
+        filter.date_filter = Some(Filter::FDate(DateFilter::new(
+            date,
+            date_format,
+            &String::from("date"),
+        )))
     }
 
     if let Some(guid) = args.get_one("guid") {

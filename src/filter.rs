@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use std::ops::Index;
 
 use crate::date_filter::DateFilter;
@@ -17,7 +18,7 @@ impl Compare for Filter {
             Filter::FNumeric(filter) => filter.compare(value),
             Filter::FSpatial(filter) => filter.compare(value),
             Filter::FString(filter) => filter.compare(value),
-            Filter::FDate(_) => false,
+            Filter::FDate(filter) => filter.compare(value),
             Filter::FList(filter) => filter.compare(value),
         }
     }
@@ -131,5 +132,11 @@ impl<'a> Iterator for LasHeaderFilterIterator<'a> {
         } else {
             None
         }
+    }
+}
+
+impl Display for LasHeaderFilter {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        todo!()
     }
 }
